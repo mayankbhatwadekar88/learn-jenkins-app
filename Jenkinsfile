@@ -14,6 +14,7 @@ pipeline {
                 }
             steps {
                 sh '''
+                    hostname
                     ls -la
                     npm --version
                     node --version
