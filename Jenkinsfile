@@ -2,7 +2,7 @@ pipeline {
         agent any
         environment {
             NETLIFY_SITE_ID='cc11f269-4166-40f2-956f-6fe836c660c7'
-  	    NETLIFY_AUTH_TOKEN=credentials('netify-token')
+  	        NETLIFY_AUTH_TOKEN=credentials('netify-token')
         }
         stages {
             stage('Build') {
@@ -69,7 +69,8 @@ pipeline {
                 }
                 }
             }
-	    stage('Deploy Stage') {
+	    
+        stage('Deploy Stage') {
                 agent {
                     docker {
                         image 'node:18-alpine'
@@ -83,24 +84,34 @@ pipeline {
                     echo "Deploying to production. Site ID: $NETLIFY_SITE_ID"
                     node_modules/.bin/netlify status
                     node_modules/.bin/netlify deploy --dir=build --json > deploy-output.json
-		    node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json
+                    node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json
                 '''
-		script {
-                    env.STAGING_URL = sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json", returnStdout: true)
-                    }
-            }
-            }
-	stage ('Staging E2E'){
-                agent {
-                    docker {
-                        image 'mcr.microsoft.com/playwright:v1.58.2-noble'
-                        reuseNode true
-                    }
+                script {
+                    env.STAGING_URL= sh(script: "node_modules/.bin/node-jq -r '.deploy_url' deploy-output.json", returnStdout: true )
                 }
-		environment {
+            }
+            }
+        stage('Staging E2E') {
+                    agent {
+                        docker {
+                            image 'mcr.microsoft.com/playwright:v1.58.2-noble'
+                            reuseNode true
+                        }
+                    }
+                    environment {
                     CI_ENVIRONMENT_URL = "${env.STAGING_URL}"
-                }
-            }
+        }
+                    steps {
+                        sh '''
+                    npx playwright test --reporter=line
+                '''
+                    }
+                    post {
+                        always {
+                            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'playwright-report', reportFiles: 'index.html', reportName: 'Staging E2E', reportTitles: '', useWrapperFileDirectly: true])
+                        }
+                    }
+                }    
 	    stage ('Approval'){
                 steps{
                     timeout(time: 15, unit: 'MINUTES'){
@@ -119,9 +130,9 @@ pipeline {
                 sh '''
                     npm install netlify-cli@20.1.1
                     node_modules/.bin/netlify --version
-		    echo "Deploying to production. Site ID: $NETLIFY_SITE_ID"
-		    node_modules/.bin/netlify status
-	            node_modules/.bin/netlify deploy --dir=build --prod
+		            echo "Deploying to production. Site ID: $NETLIFY_SITE_ID"
+		            node_modules/.bin/netlify status
+	                node_modules/.bin/netlify deploy --dir=build --prod
                 '''
             }
             }
@@ -147,5 +158,7 @@ pipeline {
                     }
                 }
         }
-}
+
+        }
+
 
