@@ -94,7 +94,7 @@ pipeline {
                         }
                     }
                     environment {
-                    CI_ENVIRONMENT_URL = 'jocular-florentine-5bd948.netlify.app'
+                    CI_ENVIRONMENT_URL = 'https://jocular-florentine-5bd948.netlify.app'
         }
                     steps {
                         sh '''
